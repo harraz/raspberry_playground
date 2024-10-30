@@ -6,7 +6,7 @@ __pycache__/
 mobilenet_*.*
 api_key
 resnet*.*
-*.jpgs
+*.jpg
 
 # C extensions
 *.so

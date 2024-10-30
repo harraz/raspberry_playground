@@ -56,6 +56,8 @@ while True:
 		captured_img = capture_image()
 		while GPIO.input(sensor):
 			time.sleep(3)
-			cp_subproc(captured_img)
+			# cp_subproc(captured_img)
 	else:
+		time.sleep(1)
 		print("no motion detected")
+        # time.sleep(1)
