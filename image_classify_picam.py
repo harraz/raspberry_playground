@@ -65,7 +65,7 @@ capture_image(image_path)
 
 # image_path ='/home/pi/playground1/1a045aba379f6f829997b785d01ce81b.jpg'
 # image_path = '/home/pi/playground1/35672988480_7c43a394ca_b.jpg'
-# image_path = 'deer_images/deer_1.jpeg'
+image_path = 'deer_images/deer_1.jpeg'
 # Classify image
 classify_image(image_path)
 
