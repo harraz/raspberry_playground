@@ -60,5 +60,5 @@ while True:
 			# cp_subproc(captured_img)
 	else:
 		time.sleep(0.5)
-		print("no motion detected")
-        # time.sleep(1)
+		# print("no motion detected")
+        	# time.sleep(1)
