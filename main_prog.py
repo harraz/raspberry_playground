@@ -7,6 +7,7 @@ sensor = 24
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(sensor, GPIO.IN)
 
+print("Initializing FAZA3")
 time.sleep(5)
 
 image_path = 'sensor_cam_image'
