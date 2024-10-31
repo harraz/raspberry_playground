@@ -56,7 +56,7 @@ while True:
 		print(f"{current_time} : motion detected")
 		captured_img = capture_image()
 		while GPIO.input(sensor):
-			time.sleep(3)
+			time.sleep(1)
 			# cp_subproc(captured_img)
 	else:
 		time.sleep(0.5)
