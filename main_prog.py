@@ -1,64 +1,84 @@
-import RPi.GPIO as GPIO 
+import RPi.GPIO as GPIO
 import time
 import datetime as dt
+import picamera
+import logging
 
-sensor = 24
+def setup_logging(log_file='FAZAAA3.log'):
+    """Set up logging to output to both console and a log file."""
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)  # Set the logging level to DEBUG to capture all messages
 
-GPIO.setmode(GPIO.BCM)
-GPIO.setup(sensor, GPIO.IN)
+    # Create file handler for logging to a file
+    file_handler = logging.FileHandler(log_file)
+    file_handler.setLevel(logging.INFO)  # Log level for file
 
-print("Initializing FAZA3")
-time.sleep(5)
+    # Create console handler for logging to console
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.DEBUG)  # Log level for console
 
-image_path = 'sensor_cam_image'
+    # Create a formatter and set it for both handlers
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    file_handler.setFormatter(formatter)
+    console_handler.setFormatter(formatter)
+
+    # Add the handlers to the logger
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
+
+# GPIO pin setup
+SENSOR_PIN = 24  # GPIO pin connected to PIR sensor
+
+def setup_gpio():
+    """Set up GPIO mode and pins."""
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setup(SENSOR_PIN, GPIO.IN)
+    logging.info("GPIO setup complete.")
 
 def capture_image(image_path='sensor_cam_image'):
-    import picamera
-    import datetime as dt
-
-    # Capture system time
+    """Capture an image and return the file path."""
     current_time = dt.datetime.now()
-
-    # Convert to string
     time_string = current_time.strftime("%Y%m%d_%H%M%S")
+    new_img_path = f'{image_path}_{time_string}.jpg'
 
-    picam = picamera.PiCamera()
-    # sleep(2)
-    # picam.image_effect(time_string)
-    print(f'{time_string}: Image taken')
-	
-    new_img_path = f'{image_path}_{time_string}.jpg' 
-	
-    picam.capture(new_img_path)
-	
-    picam.close()
-	
+    # Initialize camera and capture image
+    with picamera.PiCamera() as picam:
+        time.sleep(2)  # Warm-up time for camera
+        picam.capture(new_img_path)
+        picam.close()
+        logging.info(f'Image captured and saved at {new_img_path}')
+
     return new_img_path
 
-def cp_subproc(input_file):
-	
-    import subprocess
+def main_loop():
+    """Main loop for motion detection and camera control."""
+    try:
 
-    # Command to capture a single frame
-    cmd = [
-        'cp',
-        f'{input_file}',
-        'smb://ls-xl876/share/raspberry_pi/'
-		]
-    # Run the command
-    result = subprocess.run(cmd, capture_output=True, text=True)
+        logging.info("FAZAAA3 is ready!")
 
-    print(result.stdout)
+        while True:
+            if GPIO.input(SENSOR_PIN):
+                current_time = dt.datetime.now()
+                logging.info(f"{current_time} : Motion detected")
+                capture_image()
 
-while True:
-	if GPIO.input(sensor):
-		current_time = dt.datetime.now()
-		print(f"{current_time} : motion detected")
-		captured_img = capture_image()
-		while GPIO.input(sensor):
-			time.sleep(1)
-			# cp_subproc(captured_img)
-	else:
-		time.sleep(0.5)
-		# print("no motion detected")
-        	# time.sleep(1)
+                # Keep camera on as long as motion is detected
+                while GPIO.input(SENSOR_PIN):
+                    time.sleep(1)
+
+            else:
+                time.sleep(0.5)  # Check for motion every 0.5 seconds
+
+    except KeyboardInterrupt:
+        logging.info("Exiting FAZAAA3")
+
+    finally:
+        GPIO.cleanup()
+        logging.info("GPIO cleanup completed.")
+
+if __name__ == "__main__":
+    setup_logging()  # Initialize logging
+    logging.info("Initializing FAZAAA3...")
+    setup_gpio()    # Initialize GPIO
+    time.sleep(3)   # Allow for initialization
+    main_loop()     # Start main loop
