@@ -4,6 +4,7 @@ import datetime as dt
 import picamera
 import logging
 from relay_controller import RelayController
+import threading
 
 
 def setup_logging(log_file='FAZAAA3.log'):
@@ -52,6 +53,31 @@ def capture_image(image_path='sensor_cam_image'):
 
     return new_img_path
 
+# def get_system_temp(self):
+#     # Read the CPU temperature
+#     temp = os.popen("vcgencmd measure_temp").readline()
+#     temp_value = temp.replace("temp=", "").replace("'C\n", "")
+#     logging.info(f"System Temperature: {temp_value}°C")
+#     return float(temp_value)
+
+def get_cpu_temp():
+    """Retrieve the CPU temperature."""
+    try:
+        with open("/sys/class/thermal/thermal_zone0/temp", "r") as file:
+            temp = float(file.read().strip()) / 1000.0
+            return temp
+    except FileNotFoundError:
+        logging.error("Could not read CPU temperature.")
+        return None
+
+def log_temperature(interval=60):
+    """Log the temperature at a regular interval."""
+    while True:
+        temp = get_cpu_temp()
+        if temp:
+            logging.info(f"CPU Temperature: {temp:.2f}°C")
+        time.sleep(interval)
+
 def main_loop():
     """Main loop for motion detection and camera control."""
     try:
@@ -67,10 +93,11 @@ def main_loop():
                 # Keep camera on as long as motion is detected
                 while GPIO.input(SENSOR_PIN):
                     time.sleep(0.2)
+                    
+                relay.turn_off()
 
             else:
                 time.sleep(0.5)  # Check for motion every 0.5 seconds
-                relay.turn_off()
 
     except KeyboardInterrupt:
         logging.info("Exiting FAZAAA3")
@@ -88,4 +115,9 @@ if __name__ == "__main__":
 
     setup_gpio()    # Initialize GPIO
     time.sleep(3)   # Allow for initialization
+
+    # Start the temperature logging thread
+    temp_thread = threading.Thread(target=log_temperature, args=(60,), daemon=True)
+    temp_thread.start()
+
     main_loop()     # Start main loop
