@@ -3,6 +3,8 @@ import time
 import datetime as dt
 import picamera
 import logging
+from relay_controller import RelayController
+
 
 def setup_logging(log_file='FAZAAA3.log'):
     """Set up logging to output to both console and a log file."""
@@ -60,25 +62,30 @@ def main_loop():
             if GPIO.input(SENSOR_PIN):
                 current_time = dt.datetime.now()
                 logging.info(f"{current_time} : Motion detected")
+                relay.turn_on()
                 capture_image()
-
                 # Keep camera on as long as motion is detected
                 while GPIO.input(SENSOR_PIN):
-                    time.sleep(1)
+                    time.sleep(0.2)
 
             else:
                 time.sleep(0.5)  # Check for motion every 0.5 seconds
+                relay.turn_off()
 
     except KeyboardInterrupt:
         logging.info("Exiting FAZAAA3")
 
     finally:
         GPIO.cleanup()
+        relay.cleanup()
         logging.info("GPIO cleanup completed.")
 
 if __name__ == "__main__":
     setup_logging()  # Initialize logging
     logging.info("Initializing FAZAAA3...")
+    # Initialize relay on the specified GPIO pin (e.g., 17)
+    relay = RelayController(relay_pin=17)
+
     setup_gpio()    # Initialize GPIO
     time.sleep(3)   # Allow for initialization
     main_loop()     # Start main loop
