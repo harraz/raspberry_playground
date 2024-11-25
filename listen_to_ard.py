@@ -1,6 +1,6 @@
 import socket
 
-local_ip = "192.168.1.206"  # Raspberry Pi IP
+local_ip = "192.168.1.168"  # Raspberry Pi IP
 local_port = 8080           # Port to listen on
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
