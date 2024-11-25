@@ -3,7 +3,7 @@
 
 // WiFi credentials
 const char* ssid = "Portsaid";
-const char* password = "XMXoubl2022";
+const char* password = "***";
 
 // UDP setup
 WiFiUDP udp;
