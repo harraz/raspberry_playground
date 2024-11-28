@@ -2,6 +2,8 @@
 #include <WiFiUdp.h>
 #include <secrets.h>
 
+const char* ghafeerName = "ASHRAF";  // Device name
+
 // WiFi credentials are now defined in secrets.h
 const char* ssid = WIFI_SSID;
 const char* password = WIFI_PASSWORD;
@@ -18,32 +20,52 @@ const unsigned int targetPort = 8080; // Port to send outgoing UDP messages
 IPAddress lastClientIP;
 bool lastClientKnown = false; // Flag to check if we have a client IP
 
+// Define DEBUG flag
+#define DEBUG 0  // Set to 1 to enable debug prints, 0 to disable them
+
 void setup() {
   pinMode(PIRSensorOutputPin, INPUT); // PIR sensor input
   Serial.begin(115200);              // Serial communication for debugging
+
+  #if DEBUG
+  Serial.println("Starting up...");
+  #endif
+
   WiFi.begin(ssid, password);
 
-  WiFi.disconnect();   // Disconnect from the network
-  delay(1000);         // Wait for 1 second
-  WiFi.reconnect();    // Reconnect to the Wi-Fi network
+  // Connect to WiFi with a timeout to prevent indefinite blocking
+  unsigned long startAttemptTime = millis();
+  unsigned long timeout = 30000;  // 30 seconds timeout
 
+  #if DEBUG
+  Serial.println("Attempting to connect to WiFi...");
+  #endif
 
-  // Connect to WiFi
-  while (WiFi.status() != WL_CONNECTED) {
+  while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < timeout) {
     delay(1000);
-    Serial.println(WiFi.status());
+    #if DEBUG
     Serial.println("Connecting to WiFi...");
+    #endif
   }
 
-  Serial.println("Connected to Wi-Fi");
-  Serial.println(WiFi.localIP());
+  if (WiFi.status() == WL_CONNECTED) {
+    #if DEBUG
+    Serial.println("Connected to Wi-Fi");
+    Serial.println(WiFi.localIP());
+    #endif
+  } else {
+    #if DEBUG
+      Serial.println("Failed to connect to Wi-Fi.");
+      Serial.print("Error code: ");
+      Serial.println(WiFi.status());
+    #endif
+  }
 
   // Start UDP server
   udp.begin(localPort);
+  #if DEBUG
   Serial.printf("Listening for UDP packets on IP %s, port %d\n", WiFi.localIP().toString().c_str(), localPort);
-
-  // Set Serial timeout
-  Serial.setTimeout(100);
+  #endif
 }
 
 void loop() {
@@ -56,38 +78,46 @@ void loop() {
       incomingPacket[len] = '\0'; // Null-terminate the string
     }
 
-    // Store the sender's IP
     lastClientIP = udp.remoteIP();
     lastClientKnown = true; // Mark that we have a valid client IP
-    Serial.printf("Received message: <%s> from %s:%d\n", incomingPacket, lastClientIP.toString().c_str(), udp.remotePort());
 
-    // Send acknowledgment back to the sender
+    #if DEBUG
+    Serial.printf("Received message: <%s> from %s:%d\n", incomingPacket, lastClientIP.toString().c_str(), udp.remotePort());
+    #endif
+
     udp.beginPacket(lastClientIP, targetPort);
-    udp.print("ack");
+    udp.printf("ack:%s\n", ghafeerName);
     udp.endPacket();
-    Serial.println("Acknowledgment sent.");
+
+    #if DEBUG
+    Serial.printf("Acknowledgment sent from: %s\n", ghafeerName);
+    #endif
   }
 
-  // Check the PIR sensor state
+  // PIR sensor logic
   if (digitalRead(PIRSensorOutputPin) == HIGH) { // Motion detected
     if (!isTriggered) { // Avoid repeated triggers
       isTriggered = true;
-      Serial.println("Motion detected!");
+      #if DEBUG
+      Serial.printf("Motion detected from %s\n", ghafeerName);
+      #endif
 
-      // Send a motion-detected message via UDP
+      // Send motion-detected message via UDP
       if (lastClientKnown) {
         udp.beginPacket(lastClientIP, targetPort);
-        udp.print("Motion detected!");
+        udp.printf("MD:%s\n", ghafeerName);
         udp.endPacket();
-        Serial.println("Motion detected message sent.");
-      } else {
-        Serial.println("No client IP available to send motion message.");
+        #if DEBUG
+        Serial.printf("Motion detected message sent by: %s\n", ghafeerName);
+        #endif
       }
     }
   } else { // No motion
     if (isTriggered) { // Reset the trigger state
       isTriggered = false;
+      #if DEBUG
       Serial.println("Motion stopped.");
+      #endif
     }
   }
 
