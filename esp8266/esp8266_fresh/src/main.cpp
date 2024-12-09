@@ -21,10 +21,11 @@ IPAddress lastClientIP;
 bool lastClientKnown = false; // Flag to check if we have a client IP
 
 // Define DEBUG flag
-#define DEBUG 0  // Set to 1 to enable debug prints, 0 to disable them
+#define DEBUG 0 // Set to 1 to enable debug prints, 0 to disable them
 
 void setup() {
   pinMode(PIRSensorOutputPin, INPUT); // PIR sensor input
+  // digitalWrite(PIRSensorOutputPin, HIGH);
   Serial.begin(115200);              // Serial communication for debugging
 
   #if DEBUG
