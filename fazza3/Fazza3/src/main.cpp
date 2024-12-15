@@ -142,10 +142,45 @@ int moveBackwards(int speed, int duration) {
 void loop() {
   // put your main code here, to run repeatedly:
 
+  if (Serial.available() > 0) {
+    // Read the incoming serial data as a string
+    String input = Serial.readStringUntil('\n'); // Read input until newline
+
+    // Find the colons in the input
+    int firstColon = input.indexOf(':');
+    int secondColon = input.indexOf(':', firstColon + 1);
+
+    if (firstColon != -1 && secondColon != -1) {
+      // Extract prefix and values
+      String command = input.substring(0, firstColon); // Command (e.g., F, B, FL, FR, etc.)
+      int speed = input.substring(firstColon + 1, secondColon).toInt(); // Speed value
+      int duration = input.substring(secondColon + 1).toInt();          // Duration value
+
+      // Execute commands based on the parsed prefix
+      if (command == "F") {
+        moveForward(speed, duration);
+      } else if (command == "B") {
+        moveBackwards(speed, duration);
+      } else if (command == "FL") {
+      //   moveForwardLeft(speed, duration);
+      // } else if (command == "FR") {
+      //   moveForwardRight(speed, duration);
+      // } else if (command == "BL") {
+      //   moveBackwardLeft(speed, duration);
+      // } else if (command == "BR") {
+      //   moveBackwardRight(speed, duration);
+      } else {
+        Serial.println("Unknown command");
+      }
+    } else {
+      Serial.println("Invalid format");
+    }
+  }
+
 // moveMotor('a', 150,1000,1);
-delay(3000);
-moveForward(150,1000);
-delay(2000);
-moveBackwards(250,1000);
+// delay(3000);
+// moveForward(150,1000);
+// delay(2000);
+// moveBackwards(250,1000);
 }
 
