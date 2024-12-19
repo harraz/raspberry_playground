@@ -22,7 +22,7 @@ volatile int encoderTicksB = 0;
 
 // Function Prototypes
 void handleEncoder(int pinN, int pinP, volatile int &ticks);
-void moveMotor(int speed, int direction);
+void activateMotors(int speed, int direction);
 void stopMotors();
 void moveForward(int speed);
 void moveBackward(int speed);
@@ -66,11 +66,11 @@ void loop() {
     int thirdColon = command.indexOf(':', secondColon + 1);
 
 
-    if (cmd == 'F' || cmd == 'B' || cmd == 'S' || cmd == 'R') {
+    if (cmd == 'F' || cmd == 'B' || cmd == 'S' || cmd == 'R' || cmd == 'M') {
       if (firstColon > 0 && secondColon > firstColon) {
         int speed = command.substring(firstColon + 1, secondColon).toInt();
         int duration = command.substring(secondColon + 1).toInt();
-        int rotationDirection = command.substring(thirdColon + 1).toInt();
+        int par1 = command.substring(thirdColon + 1).toInt();
 
         speed = constrain(speed, 0, 255); // Ensure speed is valid
 
@@ -80,15 +80,19 @@ void loop() {
         Serial.print(speed);
         Serial.print(" | Duration: ");
         Serial.println(duration);
-        Serial.print(" | Rotation Direction: ");
-        Serial.println(rotationDirection);
+        Serial.print(" | Parameter 1: ");
+        Serial.println(par1);
 
         if (cmd == 'F') {
           moveForward(speed);
         } else if (cmd == 'B') {
           moveBackward(speed);
         } else if (cmd == 'R') {
+          int rotationDirection = par1;
           rotateVhcl(speed, rotationDirection);
+        } else if (cmd == 'M') {
+          int motor = par1;
+          activateMotors(speed, motor);
         }
 
         Serial.print("Motor A ticks "); Serial.println(encoderTicksA);
@@ -117,16 +121,16 @@ void handleEncoder(int pinN, int pinP, volatile int &ticks) {
 
 // Function to Move Forward
 void moveForward(int speed) {
-  moveMotor(speed, 1); // 1 means forward direction
+  activateMotors(speed, 1); // 1 means forward direction
 }
 
 // Function to Move Backward
 void moveBackward(int speed) {
-  moveMotor(speed, 0); // 0 means backward direction
+  activateMotors(speed, 0); // 0 means backward direction
 }
 
 // Function to Move Motors
-void moveMotor(int speed, int direction) {
+void activateMotors(int speed, int direction) {
   // Motor A Control
   if (direction == 1) { // Forward
     digitalWrite(in1, HIGH);
