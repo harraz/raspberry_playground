@@ -2,7 +2,7 @@
 #include <WiFiUdp.h>
 #include <secrets.h>
 
-const char* ghafeerName = "ASHRAF";  // Device name
+const char* ghafeerName = "BASYONEE";  // Device name
 
 // WiFi credentials are now defined in secrets.h
 const char* ssid = WIFI_SSID;
@@ -20,8 +20,8 @@ const unsigned int targetPort = 8080; // Port to send outgoing UDP messages
 IPAddress lastClientIP;
 bool lastClientKnown = false; // Flag to check if we have a client IP
 
-// Define DEBUG flag
-#define DEBUG 0 // Set to 1 to enable debug prints, 0 to disable them
+// Define DEBUG flagfor an hour
+#define DEBUG 1 // Set to 1 to enable debug prints, 0 to disable them
 
 void setup() {
   pinMode(PIRSensorOutputPin, INPUT); // PIR sensor input
