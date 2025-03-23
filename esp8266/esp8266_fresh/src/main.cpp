@@ -2,13 +2,15 @@
 #include <WiFiUdp.h>
 #include <secrets.h>
 
-const char* ghafeerName = "BASYONEE";  // Device name
+const char* ghafeerName = "ELRASHAASH";  // Device name
 
 // WiFi credentials are now defined in secrets.h
 const char* ssid = WIFI_SSID;
 const char* password = WIFI_PASSWORD;
 
-int PIRSensorOutputPin = 2; // GPIO2 (D4 on most ESP8266 modules)
+int PIRSensorOutputPin = 2;  // GPIO2 (D4 on most ESP8266 modules)
+int relayPin = 0;  // GPIO0 (D3 on most ESP8266 modules), change if needed
+
 bool isTriggered = false;  // To track PIR state
 
 // UDP setup
@@ -17,15 +19,20 @@ const unsigned int localPort = 12345; // Port for listening for incoming UDP pac
 const unsigned int targetPort = 8080; // Port to send outgoing UDP messages
 
 // Store the IP and port of the last UDP sender
-IPAddress lastClientIP;
+IPAddress lastClientIP;  // No longer const, as it changes
 bool lastClientKnown = false; // Flag to check if we have a client IP
 
-// Define DEBUG flagfor an hour
 #define DEBUG 1 // Set to 1 to enable debug prints, 0 to disable them
+
+unsigned long previousMillis = 0;  
+const long interval = 100;  // Interval to check motion
 
 void setup() {
   pinMode(PIRSensorOutputPin, INPUT); // PIR sensor input
-  // digitalWrite(PIRSensorOutputPin, HIGH);
+
+  pinMode(relayPin, OUTPUT);          // Relay output
+  digitalWrite(relayPin, LOW);        // Turn off the relay
+
   Serial.begin(115200);              // Serial communication for debugging
 
   #if DEBUG
@@ -70,57 +77,69 @@ void setup() {
 }
 
 void loop() {
-  // Check for incoming UDP messages
-  int packetSize = udp.parsePacket();
-  if (packetSize) {
-    char incomingPacket[255];
-    int len = udp.read(incomingPacket, sizeof(incomingPacket) - 1);
-    if (len > 0) {
-      incomingPacket[len] = '\0'; // Null-terminate the string
-    }
+  unsigned long currentMillis = millis();
+  
+  // Check if it's time to check the PIR sensor
+  if (currentMillis - previousMillis >= interval) {
+    previousMillis = currentMillis; // Save the last time we checked
 
-    lastClientIP = udp.remoteIP();
-    lastClientKnown = true; // Mark that we have a valid client IP
+    // Check for incoming UDP messages
+    int packetSize = udp.parsePacket();
+    if (packetSize) {
+      char incomingPacket[255];
+      int len = udp.read(incomingPacket, sizeof(incomingPacket) - 1);
+      if (len > 0) {
+        incomingPacket[len] = '\0'; // Null-terminate the string
+      }
 
-    #if DEBUG
-    Serial.printf("Received message: <%s> from %s:%d\n", incomingPacket, lastClientIP.toString().c_str(), udp.remotePort());
-    #endif
+      lastClientIP = udp.remoteIP();   // Store the client IP
+      lastClientKnown = true; // Mark that we have a valid client IP
 
-    udp.beginPacket(lastClientIP, targetPort);
-    udp.printf("ack:%s\n", ghafeerName);
-    udp.endPacket();
-
-    #if DEBUG
-    Serial.printf("Acknowledgment sent from: %s\n", ghafeerName);
-    #endif
-  }
-
-  // PIR sensor logic
-  if (digitalRead(PIRSensorOutputPin) == HIGH) { // Motion detected
-    if (!isTriggered) { // Avoid repeated triggers
-      isTriggered = true;
       #if DEBUG
-      Serial.printf("Motion detected from %s\n", ghafeerName);
+      Serial.printf("Received message: <%s> from %s:%d\n", incomingPacket, lastClientIP.toString().c_str(), udp.remotePort());
       #endif
 
-      // Send motion-detected message via UDP
-      if (lastClientKnown) {
-        udp.beginPacket(lastClientIP, targetPort);
-        udp.printf("MD:%s\n", ghafeerName);
-        udp.endPacket();
+      udp.beginPacket(lastClientIP, targetPort);
+      udp.printf("ACK:%s, IP:%s\n", ghafeerName, WiFi.localIP().toString().c_str());
+      udp.endPacket();
+
+      #if DEBUG
+      Serial.printf("Acknowledgment sent from: %s\n", ghafeerName);
+      #endif
+    }
+
+    // PIR sensor logic
+    if (digitalRead(PIRSensorOutputPin) == HIGH) { // Motion detected
+      if (!isTriggered) { // Avoid repeated triggers
+        isTriggered = true;
         #if DEBUG
-        Serial.printf("Motion detected message sent by: %s\n", ghafeerName);
+        Serial.printf("Motion detected from %s\n", ghafeerName);
+        #endif
+
+        // Activate the relay when motion is detected
+        digitalWrite(relayPin, HIGH); // Turn on the relay
+        
+        // Send motion-detected message via UDP
+        if (lastClientKnown) {
+          udp.beginPacket(lastClientIP, targetPort);
+          udp.printf("MD:%s, IP:%s, Time:%lu\n", ghafeerName, WiFi.localIP().toString().c_str(), millis());
+          udp.endPacket();
+          #if DEBUG
+          Serial.printf("Motion detected message sent by: %s\n", ghafeerName);
+          #endif
+        }
+      }
+    } else { // No motion
+      if (isTriggered) { // Reset the trigger state
+        isTriggered = false;
+  
+        // Deactivate the relay when motion stops
+        digitalWrite(relayPin, LOW); // Turn off the relay
+        
+        #if DEBUG
+        Serial.println("Motion stopped.");
         #endif
       }
     }
-  } else { // No motion
-    if (isTriggered) { // Reset the trigger state
-      isTriggered = false;
-      #if DEBUG
-      Serial.println("Motion stopped.");
-      #endif
-    }
   }
-
-  delay(100); // Small delay for stability
 }
