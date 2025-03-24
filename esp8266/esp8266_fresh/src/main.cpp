@@ -22,7 +22,7 @@ const unsigned int targetPort = 8080; // Port to send outgoing UDP messages
 IPAddress lastClientIP;  // No longer const, as it changes
 bool lastClientKnown = false; // Flag to check if we have a client IP
 
-#define DEBUG 1 // Set to 1 to enable debug prints, 0 to disable them
+#define DEBUG 0 // Set to 1 to enable debug prints, 0 to disable them
 
 unsigned long previousMillis = 0;  
 const long interval = 100;  // Interval to check motion
@@ -78,68 +78,117 @@ void setup() {
 
 void loop() {
   unsigned long currentMillis = millis();
-  
-  // Check if it's time to check the PIR sensor
-  if (currentMillis - previousMillis >= interval) {
-    previousMillis = currentMillis; // Save the last time we checked
 
-    // Check for incoming UDP messages
-    int packetSize = udp.parsePacket();
-    if (packetSize) {
-      char incomingPacket[255];
-      int len = udp.read(incomingPacket, sizeof(incomingPacket) - 1);
-      if (len > 0) {
-        incomingPacket[len] = '\0'; // Null-terminate the string
-      }
-
-      lastClientIP = udp.remoteIP();   // Store the client IP
-      lastClientKnown = true; // Mark that we have a valid client IP
-
-      #if DEBUG
-      Serial.printf("Received message: <%s> from %s:%d\n", incomingPacket, lastClientIP.toString().c_str(), udp.remotePort());
-      #endif
-
-      udp.beginPacket(lastClientIP, targetPort);
-      udp.printf("ACK:%s, IP:%s\n", ghafeerName, WiFi.localIP().toString().c_str());
-      udp.endPacket();
-
-      #if DEBUG
-      Serial.printf("Acknowledgment sent from: %s\n", ghafeerName);
-      #endif
+  if (Serial.available() > 0) {
+    // Read the incoming command until newline
+    String command = Serial.readStringUntil('\n');
+    command.trim();
+    
+    // Serial.print("Received command: ");
+    // Serial.println(command);
+    
+    if (command == "LEFT") {
+      Serial.println("LEFT");
+    } 
+    else if (command == "RIGHT") {
+      Serial.println("RIGHT");
+    } 
+    // else if (command == "PIR_ON") {
+    //   pirEnabled = true;
+    //   Serial.println("PIR sensor enabled.");
+    //   // Optionally add code to start reading from a PIR sensor
+    // } 
+    // else if (command == "PIR_OFF") {
+    //   pirEnabled = false;
+    //   Serial.println("PIR sensor disabled.");
+    //   // Optionally add code to stop reading from a PIR sensor
+    // } 
+    else {
+      Serial.println("Unknown command received.");
     }
+  } else {
+    // Serial.println("No command received.");
 
-    // PIR sensor logic
-    if (digitalRead(PIRSensorOutputPin) == HIGH) { // Motion detected
-      if (!isTriggered) { // Avoid repeated triggers
-        isTriggered = true;
+    // Check if it's time to check the PIR sensor
+    if (currentMillis - previousMillis >= interval) {
+      previousMillis = currentMillis; // Save the last time we checked
+  
+      // Check for incoming UDP messages
+      int packetSize = udp.parsePacket();
+      if (packetSize) {
+        char incomingPacket[255];
+        int len = udp.read(incomingPacket, sizeof(incomingPacket) - 1);
+        if (len > 0) {
+          incomingPacket[len] = '\0'; // Null-terminate the string
+        }
+  
+        lastClientIP = udp.remoteIP();   // Store the client IP
+        lastClientKnown = true; // Mark that we have a valid client IP
+  
         #if DEBUG
-        Serial.printf("Motion detected from %s\n", ghafeerName);
+        Serial.printf("Received message: <%s> from %s:%d\n", incomingPacket, lastClientIP.toString().c_str(), udp.remotePort());
         #endif
+  
+        for (int i = 0; i < len; i++) {
+          if (incomingPacket[i] == '\n' || incomingPacket[i] == '\r') {
+            incomingPacket[i] = '\0';
+            break; // Stop at newline or carriage return
+          }
+        }        
 
-        // Activate the relay when motion is detected
-        digitalWrite(relayPin, HIGH); // Turn on the relay
-        
-        // Send motion-detected message via UDP
-        if (lastClientKnown) {
-          udp.beginPacket(lastClientIP, targetPort);
-          udp.printf("MD:%s, IP:%s, Time:%lu\n", ghafeerName, WiFi.localIP().toString().c_str(), millis());
-          udp.endPacket();
+        udp.beginPacket(lastClientIP, targetPort);
+        udp.printf("ACK:NAME:%s, MSG:%s, IP:%s\n", ghafeerName, incomingPacket, \
+           WiFi.localIP().toString().c_str());
+        udp.endPacket();
+  
+        #if DEBUG
+        Serial.printf("Acknowledgment sent from: %s\n", ghafeerName);
+        #endif
+      }
+  
+      // PIR sensor logic
+      if (digitalRead(PIRSensorOutputPin) == HIGH) { // Motion detected
+        if (!isTriggered) { // Avoid repeated triggers
+          isTriggered = true;
           #if DEBUG
-          Serial.printf("Motion detected message sent by: %s\n", ghafeerName);
+          Serial.printf("Motion detected from %s\n", ghafeerName);
+          #endif
+  
+          // Activate the relay when motion is detected
+          digitalWrite(relayPin, HIGH); // Turn on the relay
+          
+          // Send motion-detected message via UDP
+          if (lastClientKnown) {
+            udp.beginPacket(lastClientIP, targetPort);
+            udp.printf("MD:%s, IP:%s, Time:%lu\n", ghafeerName, \
+              WiFi.localIP().toString().c_str(), millis());
+            udp.endPacket();
+  
+            #if DEBUG
+            Serial.printf("Motion detected message sent by: %s\n", ghafeerName);
+            #endif
+          }
+  
+          Serial.println("LEFT");
+          // Serial.println("RIGHT");
+          
+        }
+      } else { // No motion
+        if (isTriggered) { // Reset the trigger state
+          isTriggered = false;
+    
+          // Deactivate the relay when motion stops
+          digitalWrite(relayPin, LOW); // Turn off the relay
+        
+          // Serial.println("LEFT");
+          Serial.println("RIGHT");
+          
+          #if DEBUG
+          Serial.println("Motion stopped.");
           #endif
         }
       }
-    } else { // No motion
-      if (isTriggered) { // Reset the trigger state
-        isTriggered = false;
-  
-        // Deactivate the relay when motion stops
-        digitalWrite(relayPin, LOW); // Turn off the relay
-        
-        #if DEBUG
-        Serial.println("Motion stopped.");
-        #endif
-      }
     }
   }
+
 }
