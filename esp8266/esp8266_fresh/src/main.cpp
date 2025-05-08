@@ -104,7 +104,10 @@ void loop() {
     //   // Optionally add code to stop reading from a PIR sensor
     // } 
     else {
-      Serial.println("Unknown command received.");
+      #if DEBUG
+        Serial.print("Unknown command: ");
+        Serial.println(command);
+      #endif
     }
   } else {
     // Serial.println("No command received.");
@@ -169,7 +172,7 @@ void loop() {
             #endif
           }
   
-          Serial.println("LEFT");
+          Serial.println("ON");
           // Serial.println("RIGHT");
           
         }
@@ -181,7 +184,7 @@ void loop() {
           digitalWrite(relayPin, LOW); // Turn off the relay
         
           // Serial.println("LEFT");
-          Serial.println("RIGHT");
+          Serial.println("OFF");
           
           #if DEBUG
           Serial.println("Motion stopped.");
