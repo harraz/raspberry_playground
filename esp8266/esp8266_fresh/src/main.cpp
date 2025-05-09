@@ -92,17 +92,7 @@ void loop() {
     } 
     else if (command == "RIGHT") {
       Serial.println("RIGHT");
-    } 
-    // else if (command == "PIR_ON") {
-    //   pirEnabled = true;
-    //   Serial.println("PIR sensor enabled.");
-    //   // Optionally add code to start reading from a PIR sensor
-    // } 
-    // else if (command == "PIR_OFF") {
-    //   pirEnabled = false;
-    //   Serial.println("PIR sensor disabled.");
-    //   // Optionally add code to stop reading from a PIR sensor
-    // } 
+    }
     else {
       #if DEBUG
         Serial.print("Unknown command: ");
