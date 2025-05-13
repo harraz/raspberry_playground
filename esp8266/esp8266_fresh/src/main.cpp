@@ -11,7 +11,7 @@ void handlePIR();
 void handleSerial();
 
 // ——— Configuration ———————————————————————————————————
-const char* DEVICE_NAME          = "GHAFEER";
+const char* DEVICE_NAME          = "GHAFEER1";
 const unsigned int LOCAL_PORT    = 12345;
 const unsigned int TARGET_PORT   = 8080;
 const unsigned long PIR_INTERVAL = 100;   // ms
@@ -69,18 +69,27 @@ void handleUDP() {
   if (pkt == 0) return;
 
   char buf[256];
-  int len = udp.read(buf, sizeof(buf)-1);
+  int len = udp.read(buf, sizeof(buf) - 1);
   if (len < 0) return;
   buf[len] = '\0';
 
   lastClientIP = udp.remoteIP();
   hasClientIP  = true;
-  String msg = String(buf);
-  msg.trim();
 
+  String msg(buf);
+  msg.trim();
   debugPrint("UDP from " + lastClientIP.toString() + ": " + msg);
   ackUDP(msg);
+
+  // If this is a command, forward the payload to Serial
+  if (msg.startsWith("CMD:")) {
+    String cmd = msg.substring(4);  // text after "CMD:"
+    cmd.trim();
+    debugPrint("Serial " + cmd);
+    Serial.println(cmd);
+  }
 }
+
 
 void handlePIR() {
   bool motion = (digitalRead(PIR_PIN) == HIGH);
@@ -107,6 +116,17 @@ void handlePIR() {
   }
 }
 
+// Non-blocking Serial read, handle commands from Serial
+// This is a simple command parser, it will not handle complex commands
+// or arguments. It will only look for "ON", "OFF", and "STATUS" commands.
+// It will also handle "SER:<command>" to send a command to the last client IP address
+// and "IP:<ip>" to set the last client IP address.
+// It will also handle "ACK:<message>" to send an ACK message to the last client IP address
+// and "ACK" to send an ACK message to the last client IP address.
+// It will also handle "IP" to send the last client IP address to the last client IP address
+// and "IP:" to set the last client IP address.
+// It will also handle "SER" to send the last command to the last client IP address
+// and "SER:" to set the last command to the last client IP address.  
 void handleSerial() {
   while (Serial.available()) {
     char c = Serial.read();
@@ -116,21 +136,27 @@ void handleSerial() {
         serialBuffer = "";
         cmd.trim();
 
-        if (cmd == "RIGHT") {
-          motionTriggered = true;
-          digitalWrite(RELAY_PIN, HIGH);
-          Serial.println("ON");
-          debugPrint("Serial → ON");
+        if (hasClientIP) {
+          udp.beginPacket(lastClientIP, TARGET_PORT);
+          udp.printf("SER:%s IP:%s Time:%lu MSG:%s\n",
+          DEVICE_NAME,
+          WiFi.localIP().toString().c_str(),
+          millis(), cmd.c_str());
+          udp.endPacket();
+          debugPrint("Serial command: " + cmd);
         }
-        else if (cmd == "LEFT") {
-          motionTriggered = false;
-          digitalWrite(RELAY_PIN, LOW);
-          Serial.println("OFF");
-          debugPrint("Serial → OFF");
-        }
-        else {
-          debugPrint("Serial unknown: " + cmd);
-        }
+
+        // if (cmd == "ON") {
+        //   digitalWrite(RELAY_PIN, HIGH);
+        //   Serial.println("Relay ON");
+        // } else if (cmd == "OFF") {
+        //   digitalWrite(RELAY_PIN, LOW);
+        //   Serial.println("Relay OFF");
+        // } else if (cmd == "STATUS") {
+        //   Serial.println("Status: " + String(motionTriggered ? "ON" : "OFF"));
+        // } else {
+        //   Serial.println("Unknown command: " + cmd);
+        // }
       }
     } else {
       serialBuffer += c;
