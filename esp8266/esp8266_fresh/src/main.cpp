@@ -11,12 +11,12 @@ void handlePIR();
 void handleSerial();
 
 // ——— Configuration ———————————————————————————————————
-const char* DEVICE_NAME          = "GHAFEER1";
+const char* DEVICE_NAME          = "BASYOUNEE";
 const unsigned int LOCAL_PORT    = 12345;
 const unsigned int TARGET_PORT   = 8080;
 const unsigned long PIR_INTERVAL = 100;   // ms
 
-#define DEBUG 0  // Set to 1 to enable debug prints
+#define DEBUG 1  // Set to 1 to enable debug prints
 
 // ——— Pins & State ————————————————————————————————————
 const int PIR_PIN    = 2;  // D4
