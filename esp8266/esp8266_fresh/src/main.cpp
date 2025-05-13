@@ -11,12 +11,12 @@ void handlePIR();
 void handleSerial();
 
 // ——— Configuration ———————————————————————————————————
-const char* DEVICE_NAME          = "BASYOUNEE";
+const char* DEVICE_NAME          = "GHAFEER1";
 const unsigned int LOCAL_PORT    = 12345;
 const unsigned int TARGET_PORT   = 8080;
 const unsigned long PIR_INTERVAL = 100;   // ms
 
-#define DEBUG 1  // Set to 1 to enable debug prints
+#define DEBUG 0  // Set to 1 to enable debug prints
 
 // ——— Pins & State ————————————————————————————————————
 const int PIR_PIN    = 2;  // D4
@@ -145,6 +145,17 @@ void handleSerial() {
           udp.endPacket();
           debugPrint("Serial command: " + cmd);
         }
+
+        // print INFO to serial upon request regardless of DEBUG flag
+        if (cmd.startsWith("INFO")) { // print local IP address
+            Serial.println("Local IP: " + WiFi.localIP().toString());
+            Serial.println("SSID: " + String(WIFI_SSID));
+            Serial.println("Device Name: " + String(DEVICE_NAME));
+            Serial.println("UDP Port: " + String(LOCAL_PORT));
+            Serial.println("Target Port: " + String(TARGET_PORT));
+          } else {
+            Serial.println("Unknown INFO command: " + cmd);
+          }
 
         // if (cmd == "ON") {
         //   digitalWrite(RELAY_PIN, HIGH);
