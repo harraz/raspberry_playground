@@ -11,10 +11,10 @@ void handlePIR();
 void handleSerial();
 
 // ——— Configuration ———————————————————————————————————
-const char* DEVICE_NAME          = "GHAFEER1";
+const char* DEVICE_NAME          = "ASHRAF";
 const unsigned int LOCAL_PORT    = 12345;
 const unsigned int TARGET_PORT   = 8080;
-const unsigned long PIR_INTERVAL = 100;   // ms
+unsigned long PIR_INTERVAL = 60000;   // ms
 
 #define DEBUG 0  // Set to 1 to enable debug prints
 
@@ -87,9 +87,16 @@ void handleUDP() {
     cmd.trim();
     debugPrint("Serial " + cmd);
     Serial.println(cmd);
+  } else if (msg.startsWith("PIR_INTERVAL:") ) { // Set the PIR interval
+    String cmd = msg.substring(13);  // text after "PIR_INTERVAL:"
+    cmd.trim();
+    PIR_INTERVAL = cmd.toInt();
+    ackUDP("PIR_INTERVAL set to: " + String(PIR_INTERVAL));
+    debugPrint("PIR_INTERVAL set to: " + String(PIR_INTERVAL));
+  } else {
+    debugPrint("Unknown UDP command: " + msg);
   }
 }
-
 
 void handlePIR() {
   bool motion = (digitalRead(PIR_PIN) == HIGH);
@@ -152,9 +159,14 @@ void handleSerial() {
             Serial.println("SSID: " + String(WIFI_SSID));
             Serial.println("Device Name: " + String(DEVICE_NAME));
             Serial.println("UDP Port: " + String(LOCAL_PORT));
-            Serial.println("Target Port: " + String(TARGET_PORT));
+            Serial.println("Target Port: " + String(TARGET_PORT)); 
+        } else if (cmd.startsWith("PIR_INTERVAL:"))
+            {
+              /* code */
+              PIR_INTERVAL = cmd.substring(13).toInt();
+              debugPrint("PIR_INTERVAL set to: " + String(PIR_INTERVAL));
           } else {
-            Serial.println("Unknown INFO command: " + cmd);
+            debugPrint("Unknown command: " + cmd);
           }
 
         // if (cmd == "ON") {
@@ -180,6 +192,7 @@ void setup() {
   pinMode(PIR_PIN,   INPUT);
   pinMode(RELAY_PIN, OUTPUT);
   digitalWrite(RELAY_PIN, LOW);
+  digitalWrite(PIR_PIN, LOW);
 
   connectWiFi();
   udp.begin(LOCAL_PORT);
@@ -190,10 +203,11 @@ void loop() {
   unsigned long now = millis();
 
   handleSerial();  // always check for serial commands
-
+  handleUDP();
+  // handle PIR motion detection every PIR_INTERVAL milliseconds
+  // This is a non-blocking check, it will not block the loop
   if (now - lastMillis >= PIR_INTERVAL) {
     lastMillis = now;
-    handleUDP();
     handlePIR();
   }
 }
