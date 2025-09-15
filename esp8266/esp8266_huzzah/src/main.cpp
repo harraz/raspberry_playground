@@ -82,7 +82,7 @@ void loop() {
     lastClientKnown = true; // Mark that we have a valid client IP
 
     #if DEBUG
-    Serial.printf("Received message: <%s> from %s:%d\n", incomingPacket, lastClientIP.toString().c_str(), udp.remotePort());
+    Serial.printf("Received message: <%s> from %s:%d\t", incomingPacket, lastClientIP.toString().c_str(), udp.remotePort());
     #endif
 
     udp.beginPacket(lastClientIP, targetPort);
@@ -96,6 +96,27 @@ void loop() {
     // send command to Arduino via serial TX/RX
     Serial.printf(incomingPacket);
 
+  }
+
+
+// Check for Serial input from Arduino
+  if (Serial.available()) {
+    String arduinoMessage = Serial.readStringUntil('\n');
+    arduinoMessage.trim(); // Remove any trailing newline or whitespace
+
+    // Send Arduino's message back to the last UDP sender
+    if (lastClientIP != IPAddress(0, 0, 0, 0)) {
+      if (udp.beginPacket(lastClientIP, targetPort)) {
+        udp.println(arduinoMessage);
+        if (!udp.endPacket()) {
+          Serial.println("Failed to send UDP packet.");
+        }
+      } else {
+        Serial.println("Failed to start UDP packet.");
+      }
+    } else {
+      Serial.println("No valid client IP found. Cannot send message.");
+    }
   }
 
   // PIR sensor logic
@@ -127,3 +148,4 @@ void loop() {
 
   delay(100); // Small delay for stability
 }
+
